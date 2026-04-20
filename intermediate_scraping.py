@@ -1,7 +1,10 @@
 import time
 import pandas as pd
 import requests
+
 from bs4 import BeautifulSoup
+from transform import transform_data, transform_to_dataframe
+from store_to_postgre import store_to_postgre
 
 HEADERS = {
     "User-Agent": (
@@ -39,7 +42,7 @@ def extract_book_data(article):
 
     return books
 
-def scrape_book(base_url, start_page=1, delay=5):
+def scrape_book(base_url, start_page=1, delay=3):
     data = []
     page_number = start_page
 
@@ -69,9 +72,13 @@ def scrape_book(base_url, start_page=1, delay=5):
 def main():
     BASE_URL = "http://books.toscrape.com/catalogue/page-{}.html"
     all_books = scrape_book(BASE_URL)
-    df = pd.DataFrame(all_books)
-    print(df.head())
-    df.to_csv("books_data.csv", index=False)
+    if all_books:
+        df = transform_to_dataframe(all_books)
+        df = transform_data(df, exchange_rate=23000)
+        print(df.head())
+        store_to_postgre(df, "scraped_books", "postgresql://developer:supersecretpassword@localhost:5432/dicoding_booksdb")
+    else:
+        print("No data scraped.")
 
 if __name__ == "__main__":
     main()
